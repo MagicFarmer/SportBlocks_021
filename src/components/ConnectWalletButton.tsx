@@ -37,7 +37,7 @@ const ConnectWalletButton = () => {
       });
 
       if (connection && connection.wallet) {
-        const walletAccount = connection.wallet.account;
+        const walletAccount = connection.wallet.account as AccountInterface;
         const address = walletAccount.address;
         
         setAccount(walletAccount);
