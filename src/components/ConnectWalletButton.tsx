@@ -24,7 +24,7 @@ const ConnectWalletButton = () => {
     setIsConnecting(true);
     
     try {
-      const { wallet } = await connect({
+      const connection = await connect({
         modalMode: 'canAsk',
         modalTheme: 'dark',
         webWalletUrl: 'https://web.argent.xyz',
@@ -32,12 +32,12 @@ const ConnectWalletButton = () => {
         argentMobileOptions: {
           dappName: 'SportBlocks',
           url: window.location.hostname,
-          chainId: 'SN_SEPOLIA', // Testnet Sepolia
+          chainId: 'SN_SEPOLIA',
         },
       });
 
-      if (wallet && wallet.isConnected) {
-        const walletAccount = wallet.account as AccountInterface;
+      if (connection && connection.wallet) {
+        const walletAccount = connection.wallet.account;
         const address = walletAccount.address;
         
         setAccount(walletAccount);
