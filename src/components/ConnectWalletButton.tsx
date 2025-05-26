@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { connect, disconnect } from 'starknetkit';
 import { AccountInterface } from 'starknet';
@@ -34,20 +35,23 @@ const ConnectWalletButton = () => {
         },
       });
 
-      if (connection && connection.wallet && connection.wallet.account) {
-        const walletAccount = connection.wallet.account as AccountInterface;
-        const address = walletAccount.address;
-        
-        setAccount(walletAccount);
-        setWalletAddress(address);
-        setWalletConnected(true);
-        
-        // Guardar en localStorage
-        localStorage.setItem('starknet_wallet_address', address);
-        localStorage.setItem('starknet_wallet_connected', 'true');
-        
-        console.log('Wallet conectada:', address);
-        console.log('Chain ID:', await walletAccount.getChainId());
+      if (connection && connection.wallet) {
+        // Access account directly from connection object
+        const walletAccount = (connection as any).account as AccountInterface;
+        if (walletAccount) {
+          const address = walletAccount.address;
+          
+          setAccount(walletAccount);
+          setWalletAddress(address);
+          setWalletConnected(true);
+          
+          // Guardar en localStorage
+          localStorage.setItem('starknet_wallet_address', address);
+          localStorage.setItem('starknet_wallet_connected', 'true');
+          
+          console.log('Wallet conectada:', address);
+          console.log('Chain ID:', await walletAccount.getChainId());
+        }
       }
     } catch (error) {
       console.error('Error conectando wallet:', error);

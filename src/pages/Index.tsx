@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Home from './Home';
 import Gallery from './Gallery';
 import Mint from './Mint';
+import Marketplace from './Marketplace';
 
 const Index = () => {
   return (
@@ -14,6 +15,7 @@ const Index = () => {
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/mint" element={<Mint />} />
+          <Route path="/marketplace" element={<Marketplace />} />
         </Routes>
       </main>
     </div>
