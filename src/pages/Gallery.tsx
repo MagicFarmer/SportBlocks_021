@@ -1,19 +1,13 @@
 
 import { useState, useEffect } from 'react';
-
-interface NFT {
-  id: number;
-  name: string;
-  athlete: string;
-  ipfs_url: string;
-  price: string;
-  rarity: string;
-}
+import { getAllNFTs, NFT } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 const Gallery = () => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchNFTs();
@@ -21,77 +15,42 @@ const Gallery = () => {
 
   const fetchNFTs = async () => {
     try {
-      // Mock data por ahora - luego se conectará al backend
-      setTimeout(() => {
-        const mockNFTs: NFT[] = [
-          {
-            id: 1,
-            name: "Gol Histórico - Final Mundial",
-            athlete: "Lionel Messi",
-            ipfs_url: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=400&fit=crop",
-            price: "0.5 ETH",
-            rarity: "Legendario"
-          },
-          {
-            id: 2,
-            name: "Dunk Épico - Playoffs",
-            athlete: "Michael Jordan",
-            ipfs_url: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop",
-            price: "0.8 ETH",
-            rarity: "Mítico"
-          },
-          {
-            id: 3,
-            name: "Ace Perfecto - Wimbledon",
-            athlete: "Serena Williams",
-            ipfs_url: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=400&fit=crop",
-            price: "0.3 ETH",
-            rarity: "Épico"
-          },
-          {
-            id: 4,
-            name: "Carrera Legendaria - F1",
-            athlete: "Lewis Hamilton",
-            ipfs_url: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
-            price: "0.6 ETH",
-            rarity: "Legendario"
-          },
-          {
-            id: 5,
-            name: "Touchdown Decisivo - Super Bowl",
-            athlete: "Tom Brady",
-            ipfs_url: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=400&h=400&fit=crop",
-            price: "0.7 ETH",
-            rarity: "Mítico"
-          },
-          {
-            id: 6,
-            name: "Anotación Final - NBA Finals",
-            athlete: "LeBron James",
-            ipfs_url: "https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?w=400&h=400&fit=crop",
-            price: "0.4 ETH",
-            rarity: "Épico"
-          }
-        ];
-        setNfts(mockNFTs);
-        setLoading(false);
-      }, 1000);
+      setLoading(true);
+      const data = await getAllNFTs();
+      setNfts(data);
     } catch (error) {
       console.error('Error fetching NFTs:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los NFTs",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
     }
   };
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'Mítico': return 'text-purple-400 bg-purple-900/30 border-purple-500/50';
-      case 'Legendario': return 'text-orange-400 bg-orange-900/30 border-orange-500/50';
-      case 'Épico': return 'text-blue-400 bg-blue-900/30 border-blue-500/50';
+      case 'mítico': return 'text-purple-400 bg-purple-900/30 border-purple-500/50';
+      case 'legendario': return 'text-orange-400 bg-orange-900/30 border-orange-500/50';
+      case 'épico': return 'text-blue-400 bg-blue-900/30 border-blue-500/50';
       default: return 'text-gray-400 bg-gray-900/30 border-gray-500/50';
     }
   };
 
-  const filteredNFTs = filter === 'all' ? nfts : nfts.filter(nft => nft.rarity.toLowerCase() === filter);
+  const getSportIcon = (sport: string) => {
+    switch (sport) {
+      case 'futbol': return '⚽';
+      case 'basketball': return '🏀';
+      case 'tennis': return '🎾';
+      case 'formula1': return '🏎️';
+      case 'football': return '🏈';
+      default: return '🏆';
+    }
+  };
+
+  const filteredNFTs = filter === 'all' ? nfts : nfts.filter(nft => nft.rarity?.toLowerCase() === filter);
 
   if (loading) {
     return (
@@ -141,33 +100,56 @@ const Gallery = () => {
               {/* Image */}
               <div className="relative overflow-hidden">
                 <img
-                  src={nft.ipfs_url}
+                  src={nft.ipfs_url || "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop"}
                   alt={nft.name}
                   className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=400&fit=crop";
+                  }}
                 />
                 <div className="absolute top-4 right-4">
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getRarityColor(nft.rarity)}`}>
-                    {nft.rarity}
+                  <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getRarityColor(nft.rarity || 'épico')}`}>
+                    {nft.rarity?.charAt(0).toUpperCase() + nft.rarity?.slice(1) || 'Épico'}
                   </span>
                 </div>
+                <div className="absolute top-4 left-4">
+                  <span className="px-2 py-1 text-lg bg-black/50 rounded-full">
+                    {getSportIcon(nft.sport || '')}
+                  </span>
+                </div>
+                {nft.is_minted && (
+                  <div className="absolute bottom-4 left-4">
+                    <span className="px-3 py-1 text-xs font-bold rounded-full bg-green-500 text-white shadow-lg">
+                      Minteado
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
               <div className="p-6">
                 <h3 className="text-xl font-bold text-white mb-2">{nft.name}</h3>
-                <p className="text-gray-400 mb-4">by {nft.athlete}</p>
+                <p className="text-gray-400 mb-2">by {nft.athlete}</p>
+                
+                {nft.description && (
+                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                    {nft.description}
+                  </p>
+                )}
                 
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500">Precio</p>
-                    <p className="text-lg font-bold text-blue-400">{nft.price}</p>
+                    <p className="text-lg font-bold text-blue-400">
+                      {nft.price ? `${nft.price} ETH` : '0.1 ETH'}
+                    </p>
                   </div>
-                  <button 
-                    disabled
-                    className="bg-gray-600 text-gray-400 px-6 py-2 rounded-lg font-medium cursor-not-allowed"
-                  >
-                    Próximamente
-                  </button>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">Estado</p>
+                    <p className={`text-sm font-medium ${nft.is_minted ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {nft.is_minted ? 'Minteado' : 'Disponible'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

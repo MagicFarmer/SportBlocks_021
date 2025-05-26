@@ -12,6 +12,10 @@ export interface NFT {
   is_minted: boolean;
   created_at: string;
   updated_at: string;
+  price?: number;
+  sport?: string;
+  rarity?: string;
+  description?: string;
 }
 
 export interface ApiResponse<T> {

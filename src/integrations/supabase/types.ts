@@ -13,10 +13,14 @@ export type Database = {
         Row: {
           athlete: string
           created_at: string
+          description: string | null
           id: string
           ipfs_url: string | null
           is_minted: boolean | null
           name: string
+          price: number | null
+          rarity: string | null
+          sport: string | null
           token_id: string | null
           updated_at: string
           wallet_address: string | null
@@ -24,10 +28,14 @@ export type Database = {
         Insert: {
           athlete: string
           created_at?: string
+          description?: string | null
           id?: string
           ipfs_url?: string | null
           is_minted?: boolean | null
           name: string
+          price?: number | null
+          rarity?: string | null
+          sport?: string | null
           token_id?: string | null
           updated_at?: string
           wallet_address?: string | null
@@ -35,10 +43,14 @@ export type Database = {
         Update: {
           athlete?: string
           created_at?: string
+          description?: string | null
           id?: string
           ipfs_url?: string | null
           is_minted?: boolean | null
           name?: string
+          price?: number | null
+          rarity?: string | null
+          sport?: string | null
           token_id?: string | null
           updated_at?: string
           wallet_address?: string | null

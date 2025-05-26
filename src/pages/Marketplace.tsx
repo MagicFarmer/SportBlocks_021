@@ -78,19 +78,30 @@ const Marketplace = () => {
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'Mítico': return 'from-purple-500 to-pink-500';
-      case 'Legendario': return 'from-orange-500 to-red-500';
-      case 'Épico': return 'from-blue-500 to-cyan-500';
+      case 'mítico': return 'from-purple-500 to-pink-500';
+      case 'legendario': return 'from-orange-500 to-red-500';
+      case 'épico': return 'from-blue-500 to-cyan-500';
       default: return 'from-gray-500 to-gray-600';
     }
   };
 
   const getRarityBorder = (rarity: string) => {
     switch (rarity) {
-      case 'Mítico': return 'border-purple-500/50';
-      case 'Legendario': return 'border-orange-500/50';
-      case 'Épico': return 'border-blue-500/50';
+      case 'mítico': return 'border-purple-500/50';
+      case 'legendario': return 'border-orange-500/50';
+      case 'épico': return 'border-blue-500/50';
       default: return 'border-gray-500/50';
+    }
+  };
+
+  const getSportIcon = (sport: string) => {
+    switch (sport) {
+      case 'futbol': return '⚽';
+      case 'basketball': return '🏀';
+      case 'tennis': return '🎾';
+      case 'formula1': return '🏎️';
+      case 'football': return '🏈';
+      default: return '🏆';
     }
   };
 
@@ -123,7 +134,7 @@ const Marketplace = () => {
           {nfts.map((nft) => (
             <div
               key={nft.id}
-              className={`bg-gray-800/50 backdrop-blur-sm rounded-xl border-2 ${getRarityBorder('Épico')} overflow-hidden group hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20`}
+              className={`bg-gray-800/50 backdrop-blur-sm rounded-xl border-2 ${getRarityBorder(nft.rarity || 'épico')} overflow-hidden group hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20`}
             >
               {/* Image Container */}
               <div className="relative overflow-hidden">
@@ -138,14 +149,21 @@ const Marketplace = () => {
                 
                 {/* Rarity Badge */}
                 <div className="absolute top-3 right-3">
-                  <span className={`px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r ${getRarityColor('Épico')} text-white shadow-lg`}>
-                    Épico
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r ${getRarityColor(nft.rarity || 'épico')} text-white shadow-lg`}>
+                    {nft.rarity?.charAt(0).toUpperCase() + nft.rarity?.slice(1) || 'Épico'}
+                  </span>
+                </div>
+
+                {/* Sport Badge */}
+                <div className="absolute top-3 left-3">
+                  <span className="px-2 py-1 text-lg bg-black/50 rounded-full">
+                    {getSportIcon(nft.sport || '')}
                   </span>
                 </div>
 
                 {/* Status Badge */}
                 {nft.is_minted && (
-                  <div className="absolute top-3 left-3">
+                  <div className="absolute bottom-3 left-3">
                     <span className="px-3 py-1 text-xs font-bold rounded-full bg-green-500 text-white shadow-lg">
                       Minteado
                     </span>
@@ -165,6 +183,12 @@ const Marketplace = () => {
                 <p className="text-blue-400 font-medium mb-3">
                   {nft.athlete}
                 </p>
+
+                {nft.description && (
+                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                    {nft.description}
+                  </p>
+                )}
                 
                 <div className="text-gray-400 text-sm mb-4">
                   <p>Creado: {new Date(nft.created_at).toLocaleDateString()}</p>
@@ -176,9 +200,9 @@ const Marketplace = () => {
                 {/* Action Button */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Estado</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Precio</p>
                     <p className="text-lg font-bold text-white">
-                      {nft.is_minted ? 'Minteado' : 'Disponible'}
+                      {nft.price ? `${nft.price} ETH` : '0.1 ETH'}
                     </p>
                   </div>
                   
