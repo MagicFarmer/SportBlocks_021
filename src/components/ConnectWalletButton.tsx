@@ -1,34 +1,79 @@
 
 import { useState, useEffect } from 'react';
+import { connect, disconnect } from 'starknetkit';
+import { AccountInterface } from 'starknet';
 
 const ConnectWalletButton = () => {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [account, setAccount] = useState<AccountInterface | null>(null);
 
-  // Simular conexión de wallet (starknet.js se añadirá después)
+  // Cargar estado desde localStorage al montar el componente
+  useEffect(() => {
+    const savedAddress = localStorage.getItem('starknet_wallet_address');
+    const savedConnected = localStorage.getItem('starknet_wallet_connected');
+    
+    if (savedAddress && savedConnected === 'true') {
+      setWalletAddress(savedAddress);
+      setWalletConnected(true);
+    }
+  }, []);
+
   const connectWallet = async () => {
     setIsConnecting(true);
     
     try {
-      // Mock connection para testing
-      setTimeout(() => {
-        const mockAddress = '0x1234567890abcdef1234567890abcdef12345678';
-        setWalletAddress(mockAddress);
+      const { wallet } = await connect({
+        modalMode: 'canAsk',
+        modalTheme: 'dark',
+        webWalletUrl: 'https://web.argent.xyz',
+        dappName: 'SportBlocks',
+        argentMobileOptions: {
+          dappName: 'SportBlocks',
+          url: window.location.hostname,
+          chainId: 'SN_SEPOLIA', // Testnet Sepolia
+        },
+      });
+
+      if (wallet && wallet.isConnected) {
+        const walletAccount = wallet.account as AccountInterface;
+        const address = walletAccount.address;
+        
+        setAccount(walletAccount);
+        setWalletAddress(address);
         setWalletConnected(true);
-        setIsConnecting(false);
-        console.log('Wallet conectada:', mockAddress);
-      }, 1500);
+        
+        // Guardar en localStorage
+        localStorage.setItem('starknet_wallet_address', address);
+        localStorage.setItem('starknet_wallet_connected', 'true');
+        
+        console.log('Wallet conectada:', address);
+        console.log('Chain ID:', await walletAccount.getChainId());
+      }
     } catch (error) {
       console.error('Error conectando wallet:', error);
+    } finally {
       setIsConnecting(false);
     }
   };
 
-  const disconnectWallet = () => {
-    setWalletConnected(false);
-    setWalletAddress('');
-    console.log('Wallet desconectada');
+  const disconnectWallet = async () => {
+    try {
+      await disconnect();
+      
+      setWalletConnected(false);
+      setWalletAddress('');
+      setAccount(null);
+      
+      // Limpiar localStorage
+      localStorage.removeItem('starknet_wallet_address');
+      localStorage.removeItem('starknet_wallet_connected');
+      
+      console.log('Wallet desconectada');
+    } catch (error) {
+      console.error('Error desconectando wallet:', error);
+    }
   };
 
   const truncateAddress = (address: string) => {
