@@ -32,12 +32,12 @@ const ConnectWalletButton = () => {
         argentMobileOptions: {
           dappName: 'SportBlocks',
           url: window.location.hostname,
-          chainId: 'SN_SEPOLIA',
+          chainId: '0x534e5f5345504f4c4941', // SN_SEPOLIA in hex
         },
       });
 
-      if (connection && connection.wallet) {
-        const walletAccount = connection.wallet.account as AccountInterface;
+      if (connection && connection.wallet && connection.account) {
+        const walletAccount = connection.account as AccountInterface;
         const address = walletAccount.address;
         
         setAccount(walletAccount);
