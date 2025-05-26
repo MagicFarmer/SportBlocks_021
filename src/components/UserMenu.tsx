@@ -56,9 +56,10 @@ const UserMenu = () => {
       if (connection && connection.wallet) {
         console.log('Wallet encontrado:', connection.wallet);
         
-        // Verificar si la conexión tiene cuenta
-        if (connection.account) {
-          const walletAccount = connection.account as AccountInterface;
+        // Acceder a la cuenta desde la conexión usando casting
+        const walletAccount = (connection as any).account as AccountInterface;
+        
+        if (walletAccount && walletAccount.address) {
           const address = walletAccount.address;
           
           console.log('Cuenta encontrada:', address);
@@ -89,7 +90,7 @@ const UserMenu = () => {
           // Cerrar el menú después de conectar
           setIsOpen(false);
         } else {
-          console.error('No se encontró cuenta en la conexión');
+          console.error('No se encontró cuenta válida en la conexión');
           toast({
             title: "Error de Conexión",
             description: "No se pudo obtener la cuenta del wallet",
