@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import ConnectWalletButton from './ConnectWalletButton';
+import UserMenu from './UserMenu';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -52,8 +52,8 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Connect Wallet Button */}
-          <ConnectWalletButton />
+          {/* User Menu */}
+          <UserMenu />
         </div>
       </div>
     </nav>
