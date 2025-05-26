@@ -13,46 +13,24 @@ app.use(express.json());
 
 // Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://your-supabase-url.supabase.co',
-  process.env.SUPABASE_KEY || 'your-supabase-anon-key'
+  process.env.SUPABASE_URL || 'https://jgjfowqydeivwhhviwok.supabase.co',
+  process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnamZvd3F5ZGVpdndoaHZpd29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyMjQ2MTksImV4cCI6MjA2MzgwMDYxOX0.AAaFYorcsWSLpo8T9qxtwjLJGJhcG-iQjmYYK594j6c'
 );
 
-// Mock NFTs data
-const mockNFTs = [
-  {
-    id: 1,
-    name: "Gol Histórico - Final Mundial",
-    athlete: "Lionel Messi",
-    ipfs_url: "ipfs://QmexampleMessi/messi.jpg",
-    sport: "futbol",
-    rarity: "legendario",
-    price: "0.5",
-    description: "El gol que marcó la historia en la final del Mundial 2022",
-    created_at: "2024-01-15T10:00:00Z"
-  },
-  {
-    id: 2,
-    name: "Dunk Épico - Playoffs",
-    athlete: "Michael Jordan",
-    ipfs_url: "ipfs://QmexampleJordan/jordan.jpg",
-    sport: "basketball",
-    rarity: "mítico",
-    price: "0.8",
-    description: "La clavada más icónica de los playoffs de 1991",
-    created_at: "2024-01-16T14:30:00Z"
-  },
-  {
-    id: 3,
-    name: "Ace Perfecto - Wimbledon",
-    athlete: "Serena Williams",
-    ipfs_url: "ipfs://QmexampleSerena/serena.jpg",
-    sport: "tennis",
-    rarity: "épico",
-    price: "0.3",
-    description: "El ace perfecto que aseguró su victoria en Wimbledon",
-    created_at: "2024-01-17T16:45:00Z"
+// Middleware de autenticación con wallet address
+const walletAuth = (req, res, next) => {
+  const walletAddress = req.headers['x-wallet-address'];
+  
+  if (!walletAddress || walletAddress.length < 10) {
+    return res.status(401).json({
+      success: false,
+      error: 'Wallet address requerida en header x-wallet-address'
+    });
   }
-];
+  
+  req.walletAddress = walletAddress;
+  next();
+};
 
 // Routes
 
@@ -65,17 +43,28 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Get all NFTs
+// Get all NFTs - endpoint público
 app.get('/nfts', async (req, res) => {
   try {
-    console.log('Fetching NFTs...');
+    console.log('Fetching NFTs from Supabase...');
     
-    // Por ahora retornamos mock data
-    // Más adelante se conectará a Supabase
+    const { data, error } = await supabase
+      .from('nfts')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching NFTs:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Error al obtener NFTs'
+      });
+    }
+    
     res.json({
       success: true,
-      data: mockNFTs,
-      count: mockNFTs.length
+      data: data || [],
+      count: data ? data.length : 0
     });
   } catch (error) {
     console.error('Error fetching NFTs:', error);
@@ -90,9 +79,14 @@ app.get('/nfts', async (req, res) => {
 app.get('/nfts/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const nft = mockNFTs.find(n => n.id === parseInt(id));
     
-    if (!nft) {
+    const { data, error } = await supabase
+      .from('nfts')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
       return res.status(404).json({
         success: false,
         error: 'NFT no encontrado'
@@ -101,7 +95,7 @@ app.get('/nfts/:id', async (req, res) => {
     
     res.json({
       success: true,
-      data: nft
+      data
     });
   } catch (error) {
     console.error('Error fetching NFT:', error);
@@ -112,10 +106,64 @@ app.get('/nfts/:id', async (req, res) => {
   }
 });
 
-// Create new NFT (mint)
-app.post('/nfts', async (req, res) => {
+// Mint NFT - requiere autenticación con wallet
+app.post('/mint', walletAuth, async (req, res) => {
   try {
-    const { name, athlete, sport, rarity, price, description, ipfs_url } = req.body;
+    const { name, athlete, ipfs_url, token_id } = req.body;
+    const walletAddress = req.walletAddress;
+    
+    // Validación básica
+    if (!name || !athlete) {
+      return res.status(400).json({
+        success: false,
+        error: 'Campos obligatorios: name, athlete'
+      });
+    }
+    
+    const nftData = {
+      name,
+      athlete,
+      ipfs_url: ipfs_url || null,
+      wallet_address: walletAddress,
+      token_id: token_id || null,
+      is_minted: true
+    };
+    
+    const { data, error } = await supabase
+      .from('nfts')
+      .insert([nftData])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error minting NFT:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Error al mintear NFT'
+      });
+    }
+    
+    console.log('NFT minteado:', data);
+    
+    res.status(201).json({
+      success: true,
+      data,
+      message: 'NFT minteado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error minting NFT:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor'
+    });
+  }
+});
+
+// Create NFT (sin mintear) - requiere autenticación con wallet
+app.post('/nfts', walletAuth, async (req, res) => {
+  try {
+    const { name, athlete, ipfs_url, sport, rarity, price, description } = req.body;
+    const walletAddress = req.walletAddress;
     
     // Validación básica
     if (!name || !athlete || !sport) {
@@ -125,25 +173,33 @@ app.post('/nfts', async (req, res) => {
       });
     }
     
-    const newNFT = {
-      id: mockNFTs.length + 1,
+    const nftData = {
       name,
       athlete,
-      sport,
-      rarity: rarity || 'épico',
-      price: price || '0.1',
-      description: description || '',
-      ipfs_url: ipfs_url || `ipfs://Qmexample${athlete.replace(' ', '')}/image.jpg`,
-      created_at: new Date().toISOString()
+      ipfs_url: ipfs_url || null,
+      wallet_address: walletAddress,
+      is_minted: false
     };
     
-    mockNFTs.push(newNFT);
+    const { data, error } = await supabase
+      .from('nfts')
+      .insert([nftData])
+      .select()
+      .single();
     
-    console.log('NFT creado:', newNFT);
+    if (error) {
+      console.error('Error creating NFT:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Error al crear NFT'
+      });
+    }
+    
+    console.log('NFT creado:', data);
     
     res.status(201).json({
       success: true,
-      data: newNFT,
+      data,
       message: 'NFT creado exitosamente'
     });
   } catch (error) {
@@ -155,43 +211,40 @@ app.post('/nfts', async (req, res) => {
   }
 });
 
-// Get NFTs by sport
-app.get('/nfts/sport/:sport', async (req, res) => {
+// Get NFTs by wallet address - requiere autenticación
+app.get('/nfts/wallet/:address', walletAuth, async (req, res) => {
   try {
-    const { sport } = req.params;
-    const filteredNFTs = mockNFTs.filter(nft => 
-      nft.sport.toLowerCase() === sport.toLowerCase()
-    );
+    const { address } = req.params;
+    
+    // Solo permitir que vean sus propios NFTs
+    if (address !== req.walletAddress) {
+      return res.status(403).json({
+        success: false,
+        error: 'No autorizado para ver NFTs de otra wallet'
+      });
+    }
+    
+    const { data, error } = await supabase
+      .from('nfts')
+      .select('*')
+      .eq('wallet_address', address)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching NFTs by wallet:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Error al obtener NFTs'
+      });
+    }
     
     res.json({
       success: true,
-      data: filteredNFTs,
-      count: filteredNFTs.length
+      data: data || [],
+      count: data ? data.length : 0
     });
   } catch (error) {
-    console.error('Error fetching NFTs by sport:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error interno del servidor'
-    });
-  }
-});
-
-// Get NFTs by rarity
-app.get('/nfts/rarity/:rarity', async (req, res) => {
-  try {
-    const { rarity } = req.params;
-    const filteredNFTs = mockNFTs.filter(nft => 
-      nft.rarity.toLowerCase() === rarity.toLowerCase()
-    );
-    
-    res.json({
-      success: true,
-      data: filteredNFTs,
-      count: filteredNFTs.length
-    });
-  } catch (error) {
-    console.error('Error fetching NFTs by rarity:', error);
+    console.error('Error fetching NFTs by wallet:', error);
     res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
@@ -204,6 +257,7 @@ app.listen(port, () => {
   console.log(`🚀 SportBlocks API ejecutándose en puerto ${port}`);
   console.log(`📋 Health check: http://localhost:${port}/health`);
   console.log(`🎨 NFTs endpoint: http://localhost:${port}/nfts`);
+  console.log(`⛏️ Mint endpoint: http://localhost:${port}/mint`);
 });
 
 module.exports = app;

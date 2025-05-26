@@ -1,5 +1,7 @@
 
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { createNFT } from '@/services/api';
 
 const Mint = () => {
   const [formData, setFormData] = useState({
@@ -7,9 +9,11 @@ const Mint = () => {
     athlete: '',
     description: '',
     sport: '',
-    rarity: 'épico'
+    rarity: 'épico',
+    ipfs_url: ''
   });
   const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -23,19 +27,56 @@ const Mint = () => {
     e.preventDefault();
     setIsUploading(true);
     
-    // Mock mint process
-    setTimeout(() => {
-      console.log('NFT creado:', formData);
-      setIsUploading(false);
+    try {
+      // Obtener wallet address desde localStorage
+      const walletAddress = localStorage.getItem('starknet_wallet_address');
+      
+      if (!walletAddress) {
+        toast({
+          title: "Wallet no conectada",
+          description: "Por favor conecta tu wallet primero",
+          variant: "destructive",
+        });
+        setIsUploading(false);
+        return;
+      }
+
+      // Crear NFT usando la API
+      const result = await createNFT({
+        name: formData.name,
+        athlete: formData.athlete,
+        sport: formData.sport,
+        description: formData.description,
+        rarity: formData.rarity,
+        ipfs_url: formData.ipfs_url || undefined
+      }, walletAddress);
+
+      console.log('NFT creado:', result);
+      
+      toast({
+        title: "NFT Creado",
+        description: `¡${result.name} ha sido creado exitosamente!`,
+      });
+
       // Reset form
       setFormData({
         name: '',
         athlete: '',
         description: '',
         sport: '',
-        rarity: 'épico'
+        rarity: 'épico',
+        ipfs_url: ''
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Error creating NFT:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Hubo un problema al crear el NFT",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -124,6 +165,20 @@ const Mint = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                  URL de IPFS (opcional)
+                </label>
+                <input
+                  type="url"
+                  name="ipfs_url"
+                  value={formData.ipfs_url}
+                  onChange={handleInputChange}
+                  className="w-full bg-gray-900/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                  placeholder="ej. ipfs://QmExample..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Descripción
                 </label>
                 <textarea
@@ -170,25 +225,24 @@ const Mint = () => {
 
             {/* Mint Info */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8">
-              <h3 className="text-xl font-semibold text-white mb-4">Información de Mint</h3>
+              <h3 className="text-xl font-semibold text-white mb-4">Información de Creación</h3>
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Costo de mint:</span>
-                  <span className="text-white font-medium">0.01 ETH</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Gas estimado:</span>
-                  <span className="text-white font-medium">~0.005 ETH</span>
+                  <span className="text-gray-400">Costo de creación:</span>
+                  <span className="text-white font-medium">Gratis</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Red:</span>
                   <span className="text-white font-medium">Starknet Sepolia</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Estado:</span>
+                  <span className="text-blue-400 font-medium">No minteado</span>
+                </div>
                 <div className="border-t border-gray-700 pt-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Total:</span>
-                    <span className="text-blue-400 font-bold">~0.015 ETH</span>
-                  </div>
+                  <p className="text-sm text-gray-400">
+                    El NFT se creará en la base de datos y podrá ser minteado posteriormente desde el marketplace.
+                  </p>
                 </div>
               </div>
             </div>

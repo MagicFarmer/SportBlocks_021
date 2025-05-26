@@ -1,16 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-
-interface NFT {
-  id: number;
-  name: string;
-  athlete: string;
-  ipfs_url: string;
-  price: string;
-  rarity: string;
-  description: string;
-}
+import { getAllNFTs, mintNFT, NFT } from '@/services/api';
 
 const Marketplace = () => {
   const [nfts, setNfts] = useState<NFT[]>([]);
@@ -23,75 +14,35 @@ const Marketplace = () => {
 
   const fetchNFTs = async () => {
     try {
-      // Mock data simulating Supabase response
-      setTimeout(() => {
-        const mockNFTs: NFT[] = [
-          {
-            id: 1,
-            name: "Gol Histórico - Mundial 2022",
-            athlete: "Lionel Messi",
-            ipfs_url: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=400&fit=crop",
-            price: "0.5",
-            rarity: "Legendario",
-            description: "El gol decisivo en la final del Mundial"
-          },
-          {
-            id: 2,
-            name: "The Last Dance Dunk",
-            athlete: "Michael Jordan",
-            ipfs_url: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop",
-            price: "0.8",
-            rarity: "Mítico",
-            description: "Volcada épica en los playoffs de 1998"
-          },
-          {
-            id: 3,
-            name: "Ace Perfecto Wimbledon",
-            athlete: "Serena Williams",
-            ipfs_url: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=400&fit=crop",
-            price: "0.3",
-            rarity: "Épico",
-            description: "Ace decisivo en la final de Wimbledon"
-          },
-          {
-            id: 4,
-            name: "Victoria en Mónaco",
-            athlete: "Lewis Hamilton",
-            ipfs_url: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
-            price: "0.6",
-            rarity: "Legendario",
-            description: "Pole position histórica en Mónaco"
-          },
-          {
-            id: 5,
-            name: "Super Bowl MVP",
-            athlete: "Tom Brady",
-            ipfs_url: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=400&h=400&fit=crop",
-            price: "0.7",
-            rarity: "Mítico",
-            description: "Touchdown ganador del Super Bowl"
-          },
-          {
-            id: 6,
-            name: "Anotación Histórica",
-            athlete: "LeBron James",
-            ipfs_url: "https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?w=400&h=400&fit=crop",
-            price: "0.4",
-            rarity: "Épico",
-            description: "Canasta decisiva en las finales de la NBA"
-          }
-        ];
-        setNfts(mockNFTs);
-        setLoading(false);
-      }, 1000);
+      setLoading(true);
+      const data = await getAllNFTs();
+      setNfts(data);
     } catch (error) {
       console.error('Error fetching NFTs:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los NFTs",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
     }
   };
 
-  const mintNFT = async (nft: NFT) => {
+  const handleMintNFT = async (nft: NFT) => {
     try {
+      // Obtener wallet address desde localStorage
+      const walletAddress = localStorage.getItem('starknet_wallet_address');
+      
+      if (!walletAddress) {
+        toast({
+          title: "Wallet no conectada",
+          description: "Por favor conecta tu wallet primero",
+          variant: "destructive",
+        });
+        return;
+      }
+
       console.log('Iniciando mint para NFT:', nft.name);
       
       toast({
@@ -99,20 +50,27 @@ const Marketplace = () => {
         description: `Comenzando el proceso de mint para "${nft.name}" de ${nft.athlete}`,
       });
 
-      // Aquí se llamaría al contrato real
-      // Por ahora simulamos el proceso
-      setTimeout(() => {
-        toast({
-          title: "NFT Minteado",
-          description: `¡${nft.name} ha sido minteado exitosamente!`,
-        });
-      }, 2000);
+      // Llamar a la API para mintear
+      const result = await mintNFT({
+        name: nft.name,
+        athlete: nft.athlete,
+        ipfs_url: nft.ipfs_url,
+        token_id: `token_${Date.now()}` // Generar un token ID temporal
+      }, walletAddress);
+
+      toast({
+        title: "NFT Minteado",
+        description: `¡${result.name} ha sido minteado exitosamente!`,
+      });
+
+      // Refrescar la lista de NFTs
+      fetchNFTs();
 
     } catch (error) {
       console.error('Error en mint:', error);
       toast({
         title: "Error",
-        description: "Hubo un problema al mintear el NFT",
+        description: error instanceof Error ? error.message : "Hubo un problema al mintear el NFT",
         variant: "destructive",
       });
     }
@@ -165,7 +123,7 @@ const Marketplace = () => {
           {nfts.map((nft) => (
             <div
               key={nft.id}
-              className={`bg-gray-800/50 backdrop-blur-sm rounded-xl border-2 ${getRarityBorder(nft.rarity)} overflow-hidden group hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20`}
+              className={`bg-gray-800/50 backdrop-blur-sm rounded-xl border-2 ${getRarityBorder('Épico')} overflow-hidden group hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20`}
             >
               {/* Image Container */}
               <div className="relative overflow-hidden">
@@ -180,10 +138,19 @@ const Marketplace = () => {
                 
                 {/* Rarity Badge */}
                 <div className="absolute top-3 right-3">
-                  <span className={`px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r ${getRarityColor(nft.rarity)} text-white shadow-lg`}>
-                    {nft.rarity}
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r ${getRarityColor('Épico')} text-white shadow-lg`}>
+                    Épico
                   </span>
                 </div>
+
+                {/* Status Badge */}
+                {nft.is_minted && (
+                  <div className="absolute top-3 left-3">
+                    <span className="px-3 py-1 text-xs font-bold rounded-full bg-green-500 text-white shadow-lg">
+                      Minteado
+                    </span>
+                  </div>
+                )}
 
                 {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -199,25 +166,37 @@ const Marketplace = () => {
                   {nft.athlete}
                 </p>
                 
-                <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-                  {nft.description}
-                </p>
+                <div className="text-gray-400 text-sm mb-4">
+                  <p>Creado: {new Date(nft.created_at).toLocaleDateString()}</p>
+                  {nft.wallet_address && (
+                    <p className="truncate">Wallet: {nft.wallet_address.slice(0, 10)}...</p>
+                  )}
+                </div>
 
-                {/* Price and Button */}
+                {/* Action Button */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Precio</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Estado</p>
                     <p className="text-lg font-bold text-white">
-                      {nft.price} ETH
+                      {nft.is_minted ? 'Minteado' : 'Disponible'}
                     </p>
                   </div>
                   
-                  <button
-                    onClick={() => mintNFT(nft)}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
-                  >
-                    Comprar
-                  </button>
+                  {!nft.is_minted ? (
+                    <button
+                      onClick={() => handleMintNFT(nft)}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+                    >
+                      Mintear
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="bg-gray-600 text-gray-400 px-6 py-2 rounded-lg font-medium cursor-not-allowed"
+                    >
+                      Minteado
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

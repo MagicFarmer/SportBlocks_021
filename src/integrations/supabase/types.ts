@@ -9,7 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      nfts: {
+        Row: {
+          athlete: string
+          created_at: string
+          id: string
+          ipfs_url: string | null
+          is_minted: boolean | null
+          name: string
+          token_id: string | null
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          athlete: string
+          created_at?: string
+          id?: string
+          ipfs_url?: string | null
+          is_minted?: boolean | null
+          name: string
+          token_id?: string | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          athlete?: string
+          created_at?: string
+          id?: string
+          ipfs_url?: string | null
+          is_minted?: boolean | null
+          name?: string
+          token_id?: string | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
