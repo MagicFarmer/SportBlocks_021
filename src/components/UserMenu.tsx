@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { connect, disconnect } from 'starknetkit';
 import { AccountInterface } from 'starknet';
+import { useToast } from '@/hooks/use-toast';
 
 const UserMenu = () => {
   const [walletConnected, setWalletConnected] = useState(false);
@@ -19,11 +20,14 @@ const UserMenu = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [account, setAccount] = useState<AccountInterface | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
 
   // Cargar estado desde localStorage al montar el componente
   useEffect(() => {
     const savedAddress = localStorage.getItem('starknet_wallet_address');
     const savedConnected = localStorage.getItem('starknet_wallet_connected');
+    
+    console.log('Loading saved wallet state:', { savedAddress, savedConnected });
     
     if (savedAddress && savedConnected === 'true') {
       setWalletAddress(savedAddress);
@@ -33,6 +37,7 @@ const UserMenu = () => {
 
   const connectWallet = async () => {
     setIsConnecting(true);
+    console.log('Iniciando conexión de wallet...');
     
     try {
       const connection = await connect({
@@ -46,11 +51,17 @@ const UserMenu = () => {
         },
       });
 
+      console.log('Conexión recibida:', connection);
+
       if (connection && connection.wallet) {
-        // Access account directly from connection object
-        const walletAccount = (connection as any).account as AccountInterface;
-        if (walletAccount) {
+        console.log('Wallet encontrado:', connection.wallet);
+        
+        // Verificar si la conexión tiene cuenta
+        if (connection.account) {
+          const walletAccount = connection.account as AccountInterface;
           const address = walletAccount.address;
+          
+          console.log('Cuenta encontrada:', address);
           
           setAccount(walletAccount);
           setWalletAddress(address);
@@ -60,15 +71,46 @@ const UserMenu = () => {
           localStorage.setItem('starknet_wallet_address', address);
           localStorage.setItem('starknet_wallet_connected', 'true');
           
-          console.log('Wallet conectada:', address);
-          console.log('Chain ID:', await walletAccount.getChainId());
+          console.log('Wallet conectada exitosamente:', address);
+          
+          // Obtener información adicional
+          try {
+            const chainId = await walletAccount.getChainId();
+            console.log('Chain ID:', chainId);
+          } catch (chainError) {
+            console.log('No se pudo obtener Chain ID:', chainError);
+          }
+          
+          toast({
+            title: "Wallet Conectada",
+            description: `Dirección: ${address.slice(0, 6)}...${address.slice(-4)}`,
+          });
           
           // Cerrar el menú después de conectar
           setIsOpen(false);
+        } else {
+          console.error('No se encontró cuenta en la conexión');
+          toast({
+            title: "Error de Conexión",
+            description: "No se pudo obtener la cuenta del wallet",
+            variant: "destructive",
+          });
         }
+      } else {
+        console.error('No se pudo establecer conexión con el wallet');
+        toast({
+          title: "Error de Conexión",
+          description: "No se pudo conectar al wallet",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error conectando wallet:', error);
+      toast({
+        title: "Error de Conexión",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -76,6 +118,7 @@ const UserMenu = () => {
 
   const disconnectWallet = async () => {
     try {
+      console.log('Desconectando wallet...');
       await disconnect();
       
       setWalletConnected(false);
@@ -86,12 +129,22 @@ const UserMenu = () => {
       localStorage.removeItem('starknet_wallet_address');
       localStorage.removeItem('starknet_wallet_connected');
       
-      console.log('Wallet desconectada');
+      console.log('Wallet desconectada exitosamente');
+      
+      toast({
+        title: "Wallet Desconectada",
+        description: "Tu wallet ha sido desconectada exitosamente",
+      });
       
       // Cerrar el menú después de desconectar
       setIsOpen(false);
     } catch (error) {
       console.error('Error desconectando wallet:', error);
+      toast({
+        title: "Error al Desconectar",
+        description: "Hubo un problema al desconectar el wallet",
+        variant: "destructive",
+      });
     }
   };
 
